@@ -4,6 +4,43 @@ require_once __DIR__ . '/base.php';
 
 requireLogin();
 
+// Export All Bookings as CSV (Admin/Staff Only)
+if (isset($_GET['action']) && $_GET['action'] === 'all_csv') {
+    requireRole(['admin', 'approver', 'staff']);
+    
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="room-bookings-export-' . date('Y-m-d') . '.csv"');
+    
+    // Add UTF-8 BOM for Excel
+    echo "\xEF\xBB\xBF";
+    
+    $output = fopen('php://output', 'w');
+    
+    // Header
+    fputcsv($output, [
+        'ID', 'Title', 'Purpose Type', 'Room', 'Start', 'End', 
+        'User', 'User Type', 'Org/Dept', 'Phone', 
+        'Status', 'Total Amount', 'Deposit Amount', 'Payment Status', 'Created At'
+    ]);
+    
+    $stmt = $pdo->query("
+        SELECT b.id, b.title, b.purpose_type, r.name as room_name, b.start_time, b.end_time, 
+               u.fullname, u.user_type, COALESCE(b.organization, b.department) as unit, b.phone,
+               b.status, b.total_amount, b.deposit_amount, b.payment_status, b.created_at
+        FROM bookings b
+        JOIN rooms r ON b.room_id = r.id
+        JOIN users u ON b.user_id = u.id
+        ORDER BY b.created_at DESC
+    ");
+    
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit;
+}
+
 $id = $_GET['id'] ?? null;
 if (!$id) die("ID required");
 

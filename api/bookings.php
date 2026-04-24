@@ -84,6 +84,12 @@ if ($method === 'POST') {
         $layout = $input['room_layout'] ?? 'A';
         $prep_s = !empty($input['prep_start']) ? $input['prep_start'] : null;
         $prep_e = !empty($input['prep_end']) ? $input['prep_end'] : null;
+        
+        // External enhancement fields
+        $purpose_type = $input['purpose_type'] ?? 'meeting';
+        $address = $input['address'] ?? '';
+        $line_id = $input['line_id'] ?? '';
+        $attachment_path = $input['attachment_path'] ?? null;
 
         // 3-day advance booking check
         $minDate = new DateTime('+3 days');
@@ -114,19 +120,19 @@ if ($method === 'POST') {
         }
 
         $sql = "INSERT INTO bookings (
-            room_id, user_id, title, position, department, phone, 
+            room_id, user_id, title, purpose_type, position, department, address, line_id, phone, 
             participants_count, setup_participants, setup_speakers, 
             setup_snacks, setup_registration, equip_audio, 
             equip_projector, equip_visualizer, equip_other, 
-            room_layout, prep_start, prep_end, start_time, end_time, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')";
+            room_layout, prep_start, prep_end, start_time, end_time, attachment_path, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            $roomId, $userId, $title, $position, $department, $phone,
+            $roomId, $userId, $title, $purpose_type, $position, $department, $address, $line_id, $phone,
             $participants, $setup_p, $setup_s, $setup_sn, $setup_r,
             $eq_audio, $eq_proj, $eq_vis, $eq_other,
-            $layout, $prep_s, $prep_e, $start, $end
+            $layout, $prep_s, $prep_e, $start, $end, $attachment_path
         ]);
         
         $bookingId = $pdo->lastInsertId();
@@ -138,22 +144,33 @@ if ($method === 'POST') {
             $stmt->execute([$roomId]);
             $roomName = $stmt->fetchColumn();
             
-            $message = "<b>New Booking Request!</b>\n";
+            $uType = $_SESSION['user_type'] ?? 'internal';
+            $uOrg = ($uType === 'external') ? $organization : $department;
+
+            $message = "<b>📅 New Booking Request!</b>\n";
             $message .= "Title: $title\n";
             $message .= "Room: $roomName\n";
             $message .= "Time: $start to $end\n";
-            $message .= "User: " . $_SESSION['username'];
+            $message .= "User: " . $_SESSION['username'] . " (" . strtoupper($uType) . ")\n";
+            $message .= "Org/Dept: $uOrg";
             
             sendTelegramNotification($message);
 
-            // Email Notification (YOLO Add)
+            // Email Notification
             require_once __DIR__ . '/../includes/email.php';
             $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'smtp_user'");
             $adminEmail = $stmt->fetchColumn();
             if ($adminEmail) {
                 $subject = "New Room Booking: $title";
-                $html = "<p>A new room booking request has been submitted:</p>";
-                $html .= "<ul><li><b>Event:</b> $title</li><li><b>Room:</b> $roomName</li><li><b>Time:</b> $start - $end</li><li><b>User:</b> {$_SESSION['username']}</li></ul>";
+                $html = "<h3>New Room Booking Request</h3>";
+                $html .= "<ul>";
+                $html .= "<li><b>Event:</b> $title</li>";
+                $html .= "<li><b>Room:</b> $roomName</li>";
+                $html .= "<li><b>Time:</b> $start - $end</li>";
+                $html .= "<li><b>User:</b> {$_SESSION['username']} ($uType)</li>";
+                $html .= "<li><b>Organization:</b> $uOrg</li>";
+                $html .= "</ul>";
+                $html .= "<p><a href='http://localhost/thanonroom20042569/'>คลิกเพื่อเข้าสู่ระบบไปจัดการ</a></p>";
                 sendEmailNotification($adminEmail, $subject, $html);
             }
         } catch (Exception $e) {
@@ -195,16 +212,30 @@ if ($method === 'PATCH') {
         requireRole(['admin', 'approver']);
         
         $status = $input['status'] ?? null;
+        $total_amount = $input['total_amount'] ?? null;
+        $deposit_amount = $input['deposit_amount'] ?? null;
+        $payment_status = $input['payment_status'] ?? null;
 
-        if (!$id || !in_array($status, ['approved', 'rejected'])) {
-            sendResponse(['error' => 'Invalid parameters'], 400);
+        $updateFields = [];
+        $params = [];
+
+        if ($status !== null) { $updateFields[] = "status = ?"; $params[] = $status; }
+        if ($total_amount !== null) { $updateFields[] = "total_amount = ?"; $params[] = $total_amount; }
+        if ($deposit_amount !== null) { $updateFields[] = "deposit_amount = ?"; $params[] = $deposit_amount; }
+        if ($payment_status !== null) { $updateFields[] = "payment_status = ?"; $params[] = $payment_status; }
+
+        if (empty($updateFields)) {
+            sendResponse(['error' => 'No fields to update'], 400);
         }
 
-        $stmt = $pdo->prepare("UPDATE bookings SET status = ? WHERE id = ?");
-        $stmt->execute([$status, $id]);
+        $params[] = $id;
+        $sql = "UPDATE bookings SET " . implode(", ", $updateFields) . " WHERE id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
 
-        // Telegram Notification for Status Change
-        try {
+        // Telegram Notification for Status Change (Only if status was changed)
+        if ($status !== null) {
+            try {
             require_once __DIR__ . '/../includes/telegram.php';
             $stmt = $pdo->prepare("
                 SELECT b.title, r.name as room_name, u.username, u.fullname 

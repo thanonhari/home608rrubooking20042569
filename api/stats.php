@@ -2,7 +2,7 @@
 // api/stats.php
 require_once __DIR__ . '/base.php';
 
-requireRole(['admin', 'approver']);
+requireRole(['admin', 'approver', 'staff']);
 
 $stats = [];
 
@@ -39,5 +39,33 @@ $stmt = $pdo->query("
     LIMIT 5
 ");
 $stats['top_users'] = $stmt->fetchAll();
+
+// 4. Financial Stats (New)
+$stats['financial'] = [
+    'total_revenue' => $pdo->query("SELECT SUM(total_amount) FROM bookings WHERE status = 'approved'")->fetchColumn() ?: 0,
+    'total_deposit' => $pdo->query("SELECT SUM(deposit_amount) FROM bookings WHERE status = 'approved'")->fetchColumn() ?: 0,
+];
+
+// Revenue by Month
+$stmt = $pdo->query("
+    SELECT DATE_FORMAT(start_time, '%Y-%m') as month, SUM(total_amount) as amount 
+    FROM bookings 
+    WHERE status = 'approved' AND total_amount > 0
+    GROUP BY month 
+    ORDER BY month ASC 
+    LIMIT 12
+");
+$stats['revenue_monthly'] = $stmt->fetchAll();
+
+// Revenue by Room
+$stmt = $pdo->query("
+    SELECT r.name, SUM(b.total_amount) as total 
+    FROM rooms r 
+    JOIN bookings b ON r.id = b.room_id 
+    WHERE b.status = 'approved' AND b.total_amount > 0
+    GROUP BY r.id
+    ORDER BY total DESC
+");
+$stats['revenue_by_room'] = $stmt->fetchAll();
 
 sendResponse($stats);

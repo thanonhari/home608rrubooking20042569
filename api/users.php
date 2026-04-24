@@ -9,7 +9,7 @@ $input = getInput();
 
 if ($method === 'GET') {
     try {
-        $stmt = $pdo->query("SELECT id, username, prefix, fullname, role, status, position, department, phone, email, created_at FROM users ORDER BY created_at DESC");
+        $stmt = $pdo->query("SELECT id, username, prefix, fullname, role, user_type, status, position, department, organization, phone, email, created_at FROM users ORDER BY created_at DESC");
         sendResponse($stmt->fetchAll());
     } catch (Exception $e) {
         sendResponse(['error' => 'Database error: ' . $e->getMessage()], 500);
@@ -22,7 +22,7 @@ if ($method === 'PATCH') {
         if (!$userId) sendResponse(['error' => 'Missing user ID'], 400);
 
         // Dynamic update for all allowed fields
-        $allowedFields = ['role', 'status', 'prefix', 'fullname', 'position', 'department', 'phone', 'email'];
+        $allowedFields = ['role', 'status', 'prefix', 'fullname', 'position', 'department', 'organization', 'user_type', 'phone', 'email'];
         $updates = [];
         $params = [];
 

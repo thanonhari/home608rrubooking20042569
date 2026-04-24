@@ -10,10 +10,26 @@ Desktop.ini
 .vscode/
 .idea/
 
+# Node / Testing
+node_modules/
+tests-output/
+test-results/
+package-lock.json
+*.png
+*.md
+!GEMINI.md
+!README.md
+
+# Temporary / Debug
+app_backup.js
+errors.txt
+temp_html.txt
+*.tmp
+
 # MemPalace / AI Temp
 .mempalace/
 mempalace.yaml
-*.tmp
+.gemini/
 
 # MemPalace per-project files (issue #185)
 entities.json
