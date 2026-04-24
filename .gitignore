@@ -1,0 +1,19 @@
+# XAMPP / PHP
+php_errors.log
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+
+# MemPalace / AI Temp
+.mempalace/
+mempalace.yaml
+*.tmp
+
+# MemPalace per-project files (issue #185)
+entities.json
