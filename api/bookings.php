@@ -156,6 +156,26 @@ if ($method === 'POST') {
             
             sendTelegramNotification($message);
 
+            // LINE Notification for User
+            try {
+                require_once __DIR__ . '/../includes/line.php';
+                // Get user's line_user_id
+                $stmtLine = $pdo->prepare("SELECT line_user_id FROM users WHERE id = ?");
+                $stmtLine->execute([$userId]);
+                $userLineId = $stmtLine->fetchColumn();
+
+                if ($userLineId) {
+                    $lineMsg = "📅 คุณส่งคำขอจองห้องเรียบร้อยแล้ว\n";
+                    $lineMsg .= "หัวข้อ: $title\n";
+                    $lineMsg .= "ห้อง: $roomName\n";
+                    $lineMsg .= "เวลา: $start - $end\n";
+                    $lineMsg .= "สถานะ: รอการอนุมัติ";
+                    sendLineNotification($userLineId, $lineMsg);
+                }
+            } catch (Exception $le) {
+                error_log("LINE Notification failed: " . $le->getMessage());
+            }
+
             // Email Notification
             require_once __DIR__ . '/../includes/email.php';
             $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'smtp_user'");
@@ -206,6 +226,34 @@ if ($method === 'PATCH') {
             $stmt = $pdo->prepare("UPDATE bookings SET check_out_time = NOW(), rating = ?, feedback = ? WHERE id = ?");
             $stmt->execute([$rating, $feedback, $id]);
             logAction('BOOKING_CHECKOUT', "Booking ID $id checked out with rating $rating");
+
+            // LINE Rating Request
+            try {
+                require_once __DIR__ . '/../includes/line.php';
+                $stmtLine = $pdo->prepare("SELECT u.line_user_id, b.title FROM bookings b JOIN users u ON b.user_id = u.id WHERE b.id = ?");
+                $stmtLine->execute([$id]);
+                $info = $stmtLine->fetch();
+
+                if ($info && $info['line_user_id']) {
+                    $quickReply = [
+                        'type' => 'text',
+                        'text' => "🏢 การใช้งานห้อง '{$info['title']}' เสร็จสิ้นแล้ว\nกรุณาให้คะแนนความพึงพอใจเพื่อนำไปปรับปรุงการบริการครับ",
+                        'quickReply' => [
+                            'items' => [
+                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 5 ดีมาก', 'text' => "RATING:5:$id"]],
+                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 4 ดี', 'text' => "RATING:4:$id"]],
+                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 3 ปานกลาง', 'text' => "RATING:3:$id"]],
+                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 2 พอใช้', 'text' => "RATING:2:$id"]],
+                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 1 ควรปรับปรุง', 'text' => "RATING:1:$id"]],
+                            ]
+                        ]
+                    ];
+                    sendLineNotification($info['line_user_id'], $quickReply);
+                }
+            } catch (Exception $le) {
+                error_log("LINE Rating Request failed: " . $le->getMessage());
+            }
+
             sendResponse(['success' => true]);
         }
 
@@ -258,6 +306,31 @@ if ($method === 'PATCH') {
                 $message .= "Changed by: {$_SESSION['username']}";
 
                 sendTelegramNotification($message);
+
+                // LINE Notification for User on Status Update
+                try {
+                    require_once __DIR__ . '/../includes/line.php';
+                    $stmtLine = $pdo->prepare("SELECT line_user_id FROM users WHERE username = ?");
+                    $stmtLine->execute([$info['username']]);
+                    $userLineId = $stmtLine->fetchColumn();
+
+                    if ($userLineId) {
+                        $statusEmoji = $status === 'approved' ? '✅' : '❌';
+                        $statusText = $status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่ได้รับการอนุมัติ';
+                        $lineMsg = "📢 แจ้งเตือนสถานะการจอง $statusEmoji\n";
+                        $lineMsg .= "หัวข้อ: {$info['title']}\n";
+                        $lineMsg .= "ห้อง: {$info['room_name']}\n";
+                        $lineMsg .= "สถานะใหม่: $statusText";
+                        
+                        if ($status === 'approved') {
+                            $lineMsg .= "\n\nกรุณาเตรียมความพร้อมตามวันและเวลาที่กำหนดครับ";
+                        }
+                        
+                        sendLineNotification($userLineId, $lineMsg);
+                    }
+                } catch (Exception $le) {
+                    error_log("LINE Status Notification failed: " . $le->getMessage());
+                }
 
                 // Email Notification for User (YOLO Add)
                 require_once __DIR__ . '/../includes/email.php';

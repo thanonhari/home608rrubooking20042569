@@ -246,7 +246,145 @@ async function showLoginModal() {
 async function logout() { await apiFetch('api/auth.php?action=logout'); location.reload(); }
 
 function setupEventListeners() {}
-function renderStats() { document.getElementById('stats-container').innerHTML = 'Stats implementation here'; }
+async function renderStats() {
+    const container = document.getElementById('stats-container');
+    container.innerHTML = `<div class="flex items-center justify-center p-20"><span class="loading loading-spinner loading-lg text-primary"></span></div>`;
+
+    try {
+        const stats = await apiFetch('api/stats.php');
+        
+        container.innerHTML = `
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="stats shadow bg-base-100 border border-base-200">
+                    <div class="stat">
+                        <div class="stat-figure text-primary"><i class="fas fa-door-open text-2xl"></i></div>
+                        <div class="stat-title text-xs font-bold uppercase">Total Rooms</div>
+                        <div class="stat-value text-primary">${stats.summary.total_rooms}</div>
+                    </div>
+                </div>
+                <div class="stats shadow bg-base-100 border border-base-200">
+                    <div class="stat">
+                        <div class="stat-figure text-secondary"><i class="fas fa-calendar-check text-2xl"></i></div>
+                        <div class="stat-title text-xs font-bold uppercase">Total Bookings</div>
+                        <div class="stat-value text-secondary">${stats.summary.total_bookings}</div>
+                        <div class="stat-desc">${stats.summary.pending_bookings} pending</div>
+                    </div>
+                </div>
+                <div class="stats shadow bg-base-100 border border-base-200">
+                    <div class="stat">
+                        <div class="stat-figure text-success"><i class="fas fa-star text-2xl"></i></div>
+                        <div class="stat-title text-xs font-bold uppercase">Avg. Rating</div>
+                        <div class="stat-value text-success">${stats.rating_stats.average}</div>
+                        <div class="stat-desc">Out of 5.0</div>
+                    </div>
+                </div>
+                <div class="stats shadow bg-base-100 border border-base-200">
+                    <div class="stat">
+                        <div class="stat-figure text-accent"><i class="fab fa-line text-2xl"></i></div>
+                        <div class="stat-title text-xs font-bold uppercase">LINE Linked</div>
+                        <div class="stat-value text-accent">${stats.summary.line_linked_users}</div>
+                        <div class="stat-desc">Users connected</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Rating Distribution -->
+                <div class="card bg-base-100 shadow-xl border border-base-200">
+                    <div class="card-body">
+                        <h2 class="card-title text-sm font-black uppercase"><i class="fas fa-heart text-error"></i> Satisfaction Distribution</h2>
+                        <div class="h-64"><canvas id="chart-rating"></canvas></div>
+                    </div>
+                </div>
+                <!-- Financial Status -->
+                <div class="card bg-base-100 shadow-xl border border-base-200">
+                    <div class="card-body">
+                        <h2 class="card-title text-sm font-black uppercase"><i class="fas fa-money-bill-wave text-success"></i> Payment Pipeline</h2>
+                        <div class="h-64"><canvas id="chart-payments"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Revenue by User Type -->
+                <div class="card bg-base-100 shadow-xl border border-base-200">
+                    <div class="card-body">
+                        <h2 class="card-title text-sm font-black uppercase"><i class="fas fa-users text-primary"></i> Revenue by User Type</h2>
+                        <div class="h-64"><canvas id="chart-user-type"></canvas></div>
+                    </div>
+                </div>
+                <!-- Monthly Revenue -->
+                <div class="card bg-base-100 shadow-xl border border-base-200">
+                    <div class="card-body">
+                        <h2 class="card-title text-sm font-black uppercase"><i class="fas fa-chart-area text-info"></i> Monthly Revenue</h2>
+                        <div class="h-64"><canvas id="chart-revenue"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 1. Rating Chart
+        new Chart(document.getElementById('chart-rating'), {
+            type: 'bar',
+            data: {
+                labels: stats.rating_stats.distribution.map(d => '⭐ ' + d.star),
+                datasets: [{
+                    label: 'Count',
+                    data: stats.rating_stats.distribution.map(d => d.count),
+                    backgroundColor: '#f87171'
+                }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 2. Payments Chart
+        new Chart(document.getElementById('chart-payments'), {
+            type: 'doughnut',
+            data: {
+                labels: stats.payment_status_dist.map(d => d.payment_status.toUpperCase()),
+                datasets: [{
+                    data: stats.payment_status_dist.map(d => d.count),
+                    backgroundColor: ['#fbbf24', '#34d399', '#f87171', '#60a5fa']
+                }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+
+        // 3. User Type Revenue Chart
+        new Chart(document.getElementById('chart-user-type'), {
+            type: 'pie',
+            data: {
+                labels: stats.revenue_by_user_type.map(d => d.user_type.toUpperCase()),
+                datasets: [{
+                    data: stats.revenue_by_user_type.map(d => d.total),
+                    backgroundColor: ['#60a5fa', '#a78bfa', '#f472b6']
+                }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+
+        // 4. Monthly Revenue Chart
+        new Chart(document.getElementById('chart-revenue'), {
+            type: 'line',
+            data: {
+                labels: stats.revenue_monthly.map(d => d.month),
+                datasets: [{
+                    label: 'Revenue (฿)',
+                    data: stats.revenue_monthly.map(d => d.amount),
+                    borderColor: '#2dd4bf',
+                    backgroundColor: 'rgba(45, 212, 191, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+
+    } catch (e) {
+        container.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    }
+}
 function renderMyBookings() { document.getElementById('my-bookings-container').innerHTML = 'My bookings here'; }
 function renderUserManagement() { document.getElementById('users-table-container').innerHTML = 'User management here'; }
 function deleteRoomPhoto(pid, rid) { if(confirm('Delete?')) apiFetch(`api/rooms_manage.php?action=delete_photo&id=${pid}`, { method: 'DELETE' }).then(() => renderRooms()); }

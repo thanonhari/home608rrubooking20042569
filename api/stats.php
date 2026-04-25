@@ -11,10 +11,35 @@ $stats['summary'] = [
     'total_rooms' => $pdo->query("SELECT COUNT(*) FROM rooms")->fetchColumn(),
     'active_users' => $pdo->query("SELECT COUNT(*) FROM users WHERE status = 'active'")->fetchColumn(),
     'total_bookings' => $pdo->query("SELECT COUNT(*) FROM bookings")->fetchColumn(),
-    'pending_bookings' => $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending'")->fetchColumn()
+    'pending_bookings' => $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending'")->fetchColumn(),
+    // LINE Linkage Stat
+    'line_linked_users' => $pdo->query("SELECT COUNT(*) FROM users WHERE line_user_id IS NOT NULL")->fetchColumn()
 ];
 
-// 1. Bookings per room
+// 1. Satisfaction Stats (Rating) - NEW
+$stats['rating_stats'] = [
+    'average' => round($pdo->query("SELECT AVG(rating) FROM bookings WHERE rating > 0")->fetchColumn() ?: 0, 2),
+    'distribution' => $pdo->query("SELECT rating as star, COUNT(*) as count FROM bookings WHERE rating > 0 GROUP BY rating ORDER BY star DESC")->fetchAll()
+];
+
+// 2. Financial Pipeline (Payment Status) - NEW
+$stats['payment_status_dist'] = $pdo->query("
+    SELECT payment_status, COUNT(*) as count 
+    FROM bookings 
+    WHERE status = 'approved' 
+    GROUP BY payment_status
+")->fetchAll();
+
+// Revenue by User Type
+$stats['revenue_by_user_type'] = $pdo->query("
+    SELECT u.user_type, SUM(b.total_amount) as total 
+    FROM bookings b 
+    JOIN users u ON b.user_id = u.id 
+    WHERE b.status = 'approved' AND b.total_amount > 0 
+    GROUP BY u.user_type
+")->fetchAll();
+
+// 3. Room Usage
 $stmt = $pdo->query("
     SELECT r.name, COUNT(b.id) as total 
     FROM rooms r 
@@ -25,28 +50,11 @@ $stmt = $pdo->query("
 ");
 $stats['room_usage'] = $stmt->fetchAll();
 
-// 2. Status distribution
+// 4. Status distribution
 $stmt = $pdo->query("SELECT status, COUNT(*) as count FROM bookings GROUP BY status");
 $stats['status_dist'] = $stmt->fetchAll();
 
-// 3. Top users
-$stmt = $pdo->query("
-    SELECT u.username, COUNT(b.id) as total 
-    FROM users u 
-    JOIN bookings b ON u.id = b.user_id 
-    GROUP BY u.id 
-    ORDER BY total DESC 
-    LIMIT 5
-");
-$stats['top_users'] = $stmt->fetchAll();
-
-// 4. Financial Stats (New)
-$stats['financial'] = [
-    'total_revenue' => $pdo->query("SELECT SUM(total_amount) FROM bookings WHERE status = 'approved'")->fetchColumn() ?: 0,
-    'total_deposit' => $pdo->query("SELECT SUM(deposit_amount) FROM bookings WHERE status = 'approved'")->fetchColumn() ?: 0,
-];
-
-// Revenue by Month
+// 5. Monthly Revenue
 $stmt = $pdo->query("
     SELECT DATE_FORMAT(start_time, '%Y-%m') as month, SUM(total_amount) as amount 
     FROM bookings 
@@ -57,7 +65,7 @@ $stmt = $pdo->query("
 ");
 $stats['revenue_monthly'] = $stmt->fetchAll();
 
-// Revenue by Room
+// 6. Revenue by Room
 $stmt = $pdo->query("
     SELECT r.name, SUM(b.total_amount) as total 
     FROM rooms r 
