@@ -1,12 +1,11 @@
 <?php
 // includes/db.php
 // Database configuration
-
-$host = '127.0.0.1';
-$port = '3306'; // Changed from 33060 to 3306 as requested
-$db   = 'room_booking';
-$user = 'root';
-$pass = ''; // Default XAMPP password
+$host = getenv('DB_HOST') ?: '127.0.0.1';
+$port = '3306'; 
+$db   = getenv('DB_NAME') ?: 'room_booking';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASS') ?: ''; // Default XAMPP is empty, Docker uses env
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
