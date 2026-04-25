@@ -23,7 +23,7 @@ services:
     container_name: room-app
     restart: always
     ports:
-      - "8080:80" # เข้าใช้งานผ่าน http://192.168.1.202:8080
+      - "8081:80" # เข้าใช้งานผ่าน http://192.168.1.202:8081
     environment:
       DB_HOST: db
       DB_NAME: room_booking
