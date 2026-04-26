@@ -1,8 +1,8 @@
 # Project: Room Booking System (RRU)
-## Current Status: April 24, 2026
+## Current Status: April 26, 2026
 - **Source Control:** Successfully migrated to https://github.com/thanonhari/home608rrubooking20042569.git (Branch: `main`)
-- **Database:** `room_booking.sql` and `sql/schema.sql` are up to date on GitHub.
-- **Last Action:** Performed a force push to align local code with remote.
+- **Database:** Fully migrated to align with code requirements (fixed missing columns/tables).
+- **Last Action:** Enhanced login security, added quick login testing, and fixed DB schema.
 
 ## Completed Tasks: April 24, 2026
 ### 1. External Booking System (บุคคลภายนอก) - [DONE]
@@ -21,8 +21,9 @@
 
 ### 4. Automated Testing & Audit - [DONE]
 - **Tooling:** Installed Python 3.12, MarkItDown, and Playwright.
-- **Audit:** Created `scripts/system_audit.php` for database and logic verification (Passed).
-- **E2E Testing:** Set up Playwright framework with `package.json` and initial test suite.
+- **Audit:** Created `scripts/system_audit.php` and `scripts/db_health_check.php`.
+- **Security:** Enhanced login security (Session regeneration, password validation).
+- **Dev Tools:** Added Quick Login buttons for role-based testing.
 
 ## Pending Tasks (Next):
 ### 5. PDF Invoice Generation
