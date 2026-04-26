@@ -388,3 +388,24 @@ async function renderStats() {
 function renderMyBookings() { document.getElementById('my-bookings-container').innerHTML = 'My bookings here'; }
 function renderUserManagement() { document.getElementById('users-table-container').innerHTML = 'User management here'; }
 function deleteRoomPhoto(pid, rid) { if(confirm('Delete?')) apiFetch(`api/rooms_manage.php?action=delete_photo&id=${pid}`, { method: 'DELETE' }).then(() => renderRooms()); }
+
+window.quickLogin = async function(role) {
+    try {
+        toggleLoading(true);
+        await apiFetch('api/dev_login.php', {
+            method: 'POST',
+            body: JSON.stringify({ role })
+        });
+        showToast('success', `Logged in as ${role}`);
+        setTimeout(() => location.reload(), 1000);
+    } catch (e) {
+        showToast('error', 'Login failed');
+    } finally {
+        toggleLoading(false);
+    }
+}
+
+window.switchLang = function(lang) {
+    localStorage.setItem('lang', lang);
+    location.reload();
+}

@@ -142,6 +142,20 @@
                 <div class="divider"></div>
                 
                 <div class="px-4 pb-4 space-y-4">
+                    <div class="text-xs font-bold text-base-content/40 uppercase tracking-widest mb-2">
+                        Quick Login (Test)
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="btn btn-xs btn-outline btn-primary" onclick="quickLogin('admin')">Admin</button>
+                        <button class="btn btn-xs btn-outline btn-secondary" onclick="quickLogin('approver')">Approv</button>
+                        <button class="btn btn-xs btn-outline btn-accent" onclick="quickLogin('staff')">Staff</button>
+                        <button class="btn btn-xs btn-outline" onclick="quickLogin('user')">User</button>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+                
+                <div class="px-4 pb-4 space-y-4">
                     <div class="flex items-center justify-between text-xs font-bold text-base-content/40 uppercase tracking-widest">
                         Language
                     </div>

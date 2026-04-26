@@ -18,6 +18,10 @@ if (empty($username) || empty($password) || empty($fullname)) {
     sendResponse(['error' => 'Required fields missing'], 400);
 }
 
+if (strlen($password) < 6) {
+    sendResponse(['error' => 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร (Password must be at least 6 characters)'], 400);
+}
+
 if ($user_type === 'external' && empty($organization)) {
     sendResponse(['error' => 'กรุณาระบุชื่อหน่วยงาน/องค์กร (Organization is required for external users)'], 400);
 }
