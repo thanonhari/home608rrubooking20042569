@@ -49,6 +49,8 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     $stmt = $pdo->prepare("INSERT INTO room_photos (room_id, file_path) VALUES (?, ?)");
     $stmt->execute([$roomId, 'uploads/rooms/' . $fileName]);
     
+    logAction('PHOTO_UPLOADED', "Uploaded photo for Room ID: $roomId ($fileName)");
+    
     sendResponse([
         'success' => true,
         'photo' => [

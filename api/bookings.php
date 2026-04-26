@@ -7,6 +7,47 @@ $input = getInput();
 
 if ($method === 'GET') {
     try {
+        $action = $_GET['action'] ?? '';
+        $id = $_GET['id'] ?? null;
+
+        if ($id && $action !== 'generate_pdf') {
+            $stmt = $pdo->prepare("SELECT b.*, r.name as room_name, u.fullname, u.username, u.email, u.phone 
+                                 FROM bookings b 
+                                 JOIN rooms r ON b.room_id = r.id 
+                                 JOIN users u ON b.user_id = u.id 
+                                 WHERE b.id = ?");
+            $stmt->execute([$id]);
+            $booking = $stmt->fetch();
+            if ($booking && isset($booking['extra_services'])) {
+                $booking['extra_services'] = json_decode($booking['extra_services'], true);
+            }
+            sendResponse($booking);
+        }
+        
+        if ($action === 'generate_pdf') {
+            requireLogin();
+            $id = $_GET['id'] ?? null;
+            if (!$id) sendResponse(['error' => 'ID required'], 400);
+
+            // Trigger node script
+            $scriptPath = realpath(__DIR__ . '/../scripts/generate_pdf.js');
+            $command = "node \"$scriptPath\" " . escapeshellarg($id);
+            $output = shell_exec($command);
+            
+            $fileName = "BK-" . str_pad($id, 6, '0', STR_PAD_LEFT) . ".pdf";
+            $filePath = __DIR__ . "/../uploads/invoices/" . $fileName;
+
+            if (file_exists($filePath)) {
+                if (ob_get_length()) ob_clean();
+                header('Content-Type: application/pdf');
+                header('Content-Disposition: attachment; filename="' . $fileName . '"');
+                readfile($filePath);
+                exit;
+            } else {
+                sendResponse(['error' => 'PDF generation failed', 'output' => $output], 500);
+            }
+        }
+
         $mine = isset($_GET['mine']) && $_GET['mine'] == '1';
         $userId = $_SESSION['user_id'] ?? null;
 
@@ -58,17 +99,20 @@ requireLogin();
 
 if ($method === 'POST') {
     try {
-        $roomId = $input['room_id'] ?? null;
-        $title = $input['title'] ?? '';
-        $start = $input['start_time'] ?? '';
-        $end = $input['end_time'] ?? '';
+        // Security Hardening: Strict Validation
+        validate($input, [
+            'room_id' => 'required|numeric',
+            'title' => 'required|min:3',
+            'start_time' => 'required',
+            'end_time' => 'required'
+        ]);
+
+        $roomId = $input['room_id'];
+        $title = $input['title'];
+        $start = $input['start_time'];
+        $end = $input['end_time'];
         $userId = $_SESSION['user_id'];
 
-        if (!$roomId || !$start || !$end || empty($title)) {
-            sendResponse(['error' => 'Missing required fields'], 400);
-        }
-
-        // ... (rest of input handling)
         $position = $input['position'] ?? '';
         $department = $input['department'] ?? '';
         $phone = $input['phone'] ?? '';
@@ -137,7 +181,7 @@ if ($method === 'POST') {
         
         $bookingId = $pdo->lastInsertId();
 
-        // Telegram Notification
+        // Notifications
         try {
             require_once __DIR__ . '/../includes/telegram.php';
             $stmt = $pdo->prepare("SELECT name FROM rooms WHERE id = ?");
@@ -145,36 +189,27 @@ if ($method === 'POST') {
             $roomName = $stmt->fetchColumn();
             
             $uType = $_SESSION['user_type'] ?? 'internal';
-            $uOrg = ($uType === 'external') ? $organization : $department;
 
             $message = "<b>📅 New Booking Request!</b>\n";
             $message .= "Title: $title\n";
             $message .= "Room: $roomName\n";
             $message .= "Time: $start to $end\n";
             $message .= "User: " . $_SESSION['username'] . " (" . strtoupper($uType) . ")\n";
-            $message .= "Org/Dept: $uOrg";
             
             sendTelegramNotification($message);
 
-            // LINE Notification for User
+            // LINE Notification
             try {
                 require_once __DIR__ . '/../includes/line.php';
-                // Get user's line_user_id
                 $stmtLine = $pdo->prepare("SELECT line_user_id FROM users WHERE id = ?");
                 $stmtLine->execute([$userId]);
                 $userLineId = $stmtLine->fetchColumn();
 
                 if ($userLineId) {
-                    $lineMsg = "📅 คุณส่งคำขอจองห้องเรียบร้อยแล้ว\n";
-                    $lineMsg .= "หัวข้อ: $title\n";
-                    $lineMsg .= "ห้อง: $roomName\n";
-                    $lineMsg .= "เวลา: $start - $end\n";
-                    $lineMsg .= "สถานะ: รอการอนุมัติ";
+                    $lineMsg = "📅 คุณส่งคำขอจองห้องเรียบร้อยแล้ว\nหัวข้อ: $title\nห้อง: $roomName\nเวลา: $start - $end\nสถานะ: รอการอนุมัติ";
                     sendLineNotification($userLineId, $lineMsg);
                 }
-            } catch (Exception $le) {
-                error_log("LINE Notification failed: " . $le->getMessage());
-            }
+            } catch (Exception $le) {}
 
             // Email Notification
             require_once __DIR__ . '/../includes/email.php';
@@ -182,20 +217,10 @@ if ($method === 'POST') {
             $adminEmail = $stmt->fetchColumn();
             if ($adminEmail) {
                 $subject = "New Room Booking: $title";
-                $html = "<h3>New Room Booking Request</h3>";
-                $html .= "<ul>";
-                $html .= "<li><b>Event:</b> $title</li>";
-                $html .= "<li><b>Room:</b> $roomName</li>";
-                $html .= "<li><b>Time:</b> $start - $end</li>";
-                $html .= "<li><b>User:</b> {$_SESSION['username']} ($uType)</li>";
-                $html .= "<li><b>Organization:</b> $uOrg</li>";
-                $html .= "</ul>";
-                $html .= "<p><a href='http://localhost/thanonroom20042569/'>คลิกเพื่อเข้าสู่ระบบไปจัดการ</a></p>";
+                $html = "<h3>New Room Booking Request</h3><ul><li>Event: $title</li><li>Room: $roomName</li></ul>";
                 sendEmailNotification($adminEmail, $subject, $html);
             }
-        } catch (Exception $e) {
-            error_log("Notification failed: " . $e->getMessage());
-        }
+        } catch (Exception $e) {}
 
         logAction('BOOKING_CREATED', "New booking: $title (Room ID: $roomId)");
         sendResponse(['success' => true, 'id' => $bookingId]);
@@ -211,7 +236,6 @@ if ($method === 'PATCH') {
         $id = $input['id'] ?? null;
         $action = $input['action'] ?? '';
 
-        // Action: Check-in
         if ($action === 'check_in') {
             $stmt = $pdo->prepare("UPDATE bookings SET check_in_time = NOW() WHERE id = ?");
             $stmt->execute([$id]);
@@ -219,41 +243,12 @@ if ($method === 'PATCH') {
             sendResponse(['success' => true]);
         }
 
-        // Action: Check-out with Rating
         if ($action === 'check_out') {
             $rating = $input['rating'] ?? 0;
             $feedback = $input['feedback'] ?? '';
             $stmt = $pdo->prepare("UPDATE bookings SET check_out_time = NOW(), rating = ?, feedback = ? WHERE id = ?");
             $stmt->execute([$rating, $feedback, $id]);
             logAction('BOOKING_CHECKOUT', "Booking ID $id checked out with rating $rating");
-
-            // LINE Rating Request
-            try {
-                require_once __DIR__ . '/../includes/line.php';
-                $stmtLine = $pdo->prepare("SELECT u.line_user_id, b.title FROM bookings b JOIN users u ON b.user_id = u.id WHERE b.id = ?");
-                $stmtLine->execute([$id]);
-                $info = $stmtLine->fetch();
-
-                if ($info && $info['line_user_id']) {
-                    $quickReply = [
-                        'type' => 'text',
-                        'text' => "🏢 การใช้งานห้อง '{$info['title']}' เสร็จสิ้นแล้ว\nกรุณาให้คะแนนความพึงพอใจเพื่อนำไปปรับปรุงการบริการครับ",
-                        'quickReply' => [
-                            'items' => [
-                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 5 ดีมาก', 'text' => "RATING:5:$id"]],
-                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 4 ดี', 'text' => "RATING:4:$id"]],
-                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 3 ปานกลาง', 'text' => "RATING:3:$id"]],
-                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 2 พอใช้', 'text' => "RATING:2:$id"]],
-                                ['type' => 'action', 'action' => ['type' => 'message', 'label' => '⭐ 1 ควรปรับปรุง', 'text' => "RATING:1:$id"]],
-                            ]
-                        ]
-                    ];
-                    sendLineNotification($info['line_user_id'], $quickReply);
-                }
-            } catch (Exception $le) {
-                error_log("LINE Rating Request failed: " . $le->getMessage());
-            }
-
             sendResponse(['success' => true]);
         }
 
@@ -263,97 +258,39 @@ if ($method === 'PATCH') {
         $total_amount = $input['total_amount'] ?? null;
         $deposit_amount = $input['deposit_amount'] ?? null;
         $payment_status = $input['payment_status'] ?? null;
+        $doc_ref_no = $input['doc_ref_no'] ?? null;
+        $receipt_no = $input['receipt_no'] ?? null;
+        $extra_services = isset($input['extra_services']) ? json_encode($input['extra_services'], JSON_UNESCAPED_UNICODE) : null;
 
-        $updateFields = [];
-        $params = [];
-
+        $updateFields = []; $params = [];
         if ($status !== null) { $updateFields[] = "status = ?"; $params[] = $status; }
         if ($total_amount !== null) { $updateFields[] = "total_amount = ?"; $params[] = $total_amount; }
         if ($deposit_amount !== null) { $updateFields[] = "deposit_amount = ?"; $params[] = $deposit_amount; }
         if ($payment_status !== null) { $updateFields[] = "payment_status = ?"; $params[] = $payment_status; }
+        if ($doc_ref_no !== null) { $updateFields[] = "doc_ref_no = ?"; $params[] = $doc_ref_no; }
+        if ($receipt_no !== null) { $updateFields[] = "receipt_no = ?"; $params[] = $receipt_no; }
+        if ($extra_services !== null) { $updateFields[] = "extra_services = ?"; $params[] = $extra_services; }
 
-        if (empty($updateFields)) {
-            sendResponse(['error' => 'No fields to update'], 400);
-        }
+        if (empty($updateFields)) sendResponse(['error' => 'No fields to update'], 400);
 
         $params[] = $id;
         $sql = "UPDATE bookings SET " . implode(", ", $updateFields) . " WHERE id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $pdo->prepare($sql)->execute($params);
 
-        // Telegram Notification for Status Change (Only if status was changed)
         if ($status !== null) {
             try {
-            require_once __DIR__ . '/../includes/telegram.php';
-            $stmt = $pdo->prepare("
-                SELECT b.title, r.name as room_name, u.username, u.fullname 
-                FROM bookings b 
-                JOIN rooms r ON b.room_id = r.id 
-                JOIN users u ON b.user_id = u.id
-                WHERE b.id = ?
-            ");
-            $stmt->execute([$id]);
-            $info = $stmt->fetch();
-
-            if ($info) {
-                $statusEmoji = $status === 'approved' ? '✅' : '❌';
-                $statusText = strtoupper($status);
-                $message = "<b>Booking Update!</b> $statusEmoji\n";
-                $message .= "Title: {$info['title']}\n";
-                $message .= "Room: {$info['room_name']}\n";
-                $message .= "User: " . ($info['fullname'] ?: $info['username']) . "\n";
-                $message .= "New Status: <b>$statusText</b>\n";
-                $message .= "Changed by: {$_SESSION['username']}";
-
-                sendTelegramNotification($message);
-
-                // LINE Notification for User on Status Update
-                try {
-                    require_once __DIR__ . '/../includes/line.php';
-                    $stmtLine = $pdo->prepare("SELECT line_user_id FROM users WHERE username = ?");
-                    $stmtLine->execute([$info['username']]);
-                    $userLineId = $stmtLine->fetchColumn();
-
-                    if ($userLineId) {
-                        $statusEmoji = $status === 'approved' ? '✅' : '❌';
-                        $statusText = $status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่ได้รับการอนุมัติ';
-                        $lineMsg = "📢 แจ้งเตือนสถานะการจอง $statusEmoji\n";
-                        $lineMsg .= "หัวข้อ: {$info['title']}\n";
-                        $lineMsg .= "ห้อง: {$info['room_name']}\n";
-                        $lineMsg .= "สถานะใหม่: $statusText";
-                        
-                        if ($status === 'approved') {
-                            $lineMsg .= "\n\nกรุณาเตรียมความพร้อมตามวันและเวลาที่กำหนดครับ";
-                        }
-                        
-                        sendLineNotification($userLineId, $lineMsg);
-                    }
-                } catch (Exception $le) {
-                    error_log("LINE Status Notification failed: " . $le->getMessage());
+                require_once __DIR__ . '/../includes/telegram.php';
+                $stmt = $pdo->prepare("SELECT b.title, r.name as room_name, u.username, u.fullname FROM bookings b JOIN rooms r ON b.room_id = r.id JOIN users u ON b.user_id = u.id WHERE b.id = ?");
+                $stmt->execute([$id]);
+                $info = $stmt->fetch();
+                if ($info) {
+                    $statusText = strtoupper($status);
+                    sendTelegramNotification("<b>Booking Update!</b>\nTitle: {$info['title']}\nStatus: $statusText");
                 }
-
-                // Email Notification for User (YOLO Add)
-                require_once __DIR__ . '/../includes/email.php';
-                // Get user email
-                $stmt = $pdo->prepare("SELECT email FROM users WHERE username = ?");
-                $stmt->execute([$info['username']]);
-                $userEmail = $stmt->fetchColumn();
-
-                if ($userEmail) {
-                    $subject = "Room Booking Update: {$info['title']}";
-                    $statusColor = $status === 'approved' ? '#22c55e' : '#ef4444';
-                    $html = "<p>Your room booking has been updated.</p>";
-                    $html .= "<p>Status: <b style='color:$statusColor'>".strtoupper($status)."</b></p>";
-                    $html .= "<ul><li><b>Event:</b> {$info['title']}</li><li><b>Room:</b> {$info['room_name']}</li></ul>";
-                    sendEmailNotification($userEmail, $subject, $html);
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Telegram Status Update Notification failed: " . $e->getMessage());
+            } catch (Exception $e) {}
         }
 
-        logAction('BOOKING_STATUS_CHANGED', "Booking ID $id changed to $status by {$_SESSION['username']}");
-        
+        logAction('BOOKING_STATUS_CHANGED', "Booking ID $id changed to $status");
         sendResponse(['success' => true]);
     } catch (Exception $e) {
         sendResponse(['error' => 'Database error: ' . $e->getMessage()], 500);
@@ -364,24 +301,20 @@ if ($method === 'DELETE') {
     try {
         $id = $_GET['id'] ?? null;
         if (!$id) sendResponse(['error' => 'ID required'], 400);
-
-        // Fetch booking to check ownership
         $stmt = $pdo->prepare("SELECT user_id, status FROM bookings WHERE id = ?");
         $stmt->execute([$id]);
         $booking = $stmt->fetch();
-
         if (!$booking) sendResponse(['error' => 'Booking not found'], 404);
 
         $isAdmin = in_array($_SESSION['role'], ['admin', 'approver']);
-        $isOwner = $booking['user_id'] == $_SESSION['user_id'];
+        $isOwner = $booking['user_id'] == ($_SESSION['user_id'] ?? 0);
 
         if ($isAdmin || ($isOwner && $booking['status'] === 'pending')) {
-            $stmt = $pdo->prepare("DELETE FROM bookings WHERE id = ?");
-            $stmt->execute([$id]);
-            logAction('BOOKING_CANCELLED', "Booking ID $id removed by {$_SESSION['username']}");
+            $pdo->prepare("DELETE FROM bookings WHERE id = ?")->execute([$id]);
+            logAction('BOOKING_CANCELLED', "Booking ID $id removed");
             sendResponse(['success' => true]);
         } else {
-            sendResponse(['error' => 'Permission denied or booking cannot be cancelled'], 403);
+            sendResponse(['error' => 'Permission denied'], 403);
         }
     } catch (Exception $e) {
         sendResponse(['error' => 'Database error: ' . $e->getMessage()], 500);

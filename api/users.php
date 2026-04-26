@@ -18,8 +18,11 @@ if ($method === 'GET') {
 
 if ($method === 'PATCH') {
     try {
-        $userId = $input['id'] ?? null;
-        if (!$userId) sendResponse(['error' => 'Missing user ID'], 400);
+        validate($input, [
+            'id' => 'required|numeric'
+        ]);
+        
+        $userId = $input['id'];
 
         // Dynamic update for all allowed fields
         $allowedFields = ['role', 'status', 'prefix', 'fullname', 'position', 'department', 'organization', 'user_type', 'phone', 'email'];

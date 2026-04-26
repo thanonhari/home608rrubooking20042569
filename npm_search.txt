@@ -1,0 +1,134 @@
+playwright-mcp-parallel
+Playwright MCP with parallel multi-instance browser support. Drop-in enhancement over @playwright/mcp.
+Version 0.0.79 published 2026-04-22 by wangkouzhun
+Maintainers: wangkouzhun
+Keywords: playwright mcp parallel browser automation multi-instance
+https://npm.im/playwright-mcp-parallel
+
+@playwright/mcp
+Playwright Tools for MCP
+Version 0.0.70 published 2026-04-01 by GitHub Actions
+Maintainers: pavelfeldman yurys dgozman-ms playwright-bot
+https://npm.im/@playwright/mcp
+
+playwright-mcp-tabbed
+Playwright MCP server with per-tool tab_index support for parallel agent use
+Version 1.1.2 published 2026-04-04 by songofhawk
+Maintainers: songofhawk
+Keywords: playwright mcp cursor browser-automation parallel-agents
+https://npm.im/playwright-mcp-tabbed
+
+@executeautomation/playwright-mcp-server
+Model Context Protocol servers for Playwright
+Version 1.0.12 published 2025-12-12 by executeautomation
+Maintainers: executeautomation
+Keywords: playwright automation AI Claude MCP
+https://npm.im/@executeautomation/playwright-mcp-server
+
+ultimate-playwright-mcp
+Multi-agent Playwright MCP server with tab isolation via targetId
+Version 0.2.1 published 2026-04-03 by GitHub Actions
+Maintainers: pm990320
+Keywords: mcp playwright browser automation multi-agent tab-isolation cdp
+https://npm.im/ultimate-playwright-mcp
+
+playwright-mcp
+Playwright integration for ModelContext
+Version 0.0.19 published 2026-01-04 by ashishbansal
+Maintainers: ashishbansal
+Keywords: playwright mcp modelcontextprotocol test automation playwright-mcp
+https://npm.im/playwright-mcp
+
+playwright-mcp-hosts
+Playwright MCP with custom hosts mapping, like SwitchHosts for browser automation
+Version 0.0.3 published 2026-04-03 by yy950812
+Maintainers: yy950812
+Keywords: playwright mcp hosts proxy browser-automation model-context-protocol
+https://npm.im/playwright-mcp-hosts
+
+@vinoth320/playwrightmcp
+Production Playwright MCP bridge: SSE/Streamable HTTP, multi-session browsers, optional stealth
+Version 1.3.8 published 2026-04-01 by vinoth320
+Maintainers: vinoth320
+Keywords: mcp playwright browser automation sse stealth model-context-protocol
+https://npm.im/@vinoth320/playwrightmcp
+
+rae-playwright-mcp
+Rae Playwright MCP - Enhanced Playwright Tools for MCP
+Version 0.0.8 published 2026-02-08 by kalil0321
+Maintainers: kalil0321
+https://npm.im/rae-playwright-mcp
+
+@zibby/mcp-browser
+Wrapper for @playwright/mcp with stable ID support and event recording
+Version 0.1.8 published 2026-04-17 by zibby
+Maintainers: zibby
+Keywords: mcp playwright browser automation stable-id
+https://npm.im/@zibby/mcp-browser
+
+mcp-playwright-headless
+Headless Playwright MCP runner (single binary)
+Version 0.0.3 published 2026-04-13 by visithaider
+Maintainers: visithaider
+Keywords: playwright mcp browser automation
+https://npm.im/mcp-playwright-headless
+
+better-playwright-mcp3
+Better Playwright MCP v3 - High-performance browser automation with intelligent content search
+Version 3.2.0 published 2025-08-27 by daijiahua
+Maintainers: daijiahua
+Keywords: playwright mcp model-context-protocol browser-automation
+https://npm.im/better-playwright-mcp3
+
+playwright-mcp-automation
+Lightweight Playwright MCP automation - zero config, works with all AI IDEs
+Version 1.0.3 published 2025-11-12 by divyam_pant
+Maintainers: divyam_pant
+Keywords: playwright mcp automation testing e2e api-testing ai cursor copilot jetbrains codeium test-automation browser-automation zero-config
+https://npm.im/playwright-mcp-automation
+
+@linatang/playwright-browser-manager-mcp
+Playwright MCP browser manager for multi-session automation with profile isolation and auto-healing recovery
+Version 0.3.0 published 2026-04-15 by linatang
+Maintainers: linatang
+Keywords: mcp model-context-protocol playwright browser-automation browser-manager multi-session agent-tools agentic profile-isolation auto-healing
+https://npm.im/@linatang/playwright-browser-manager-mcp
+
+playwright-browser-mcp
+A lightweight wrapper around [`@playwright/mcp`](https://github.com/nicholasgriffintn/playwright-mcp) that automatically starts a Chrome instance and connects it to a Playwright MCP server via the Chrome DevTools Protocol (CDP).
+Version 1.0.1 published 2026-04-23 by tkhoa87
+Maintainers: tkhoa87
+https://npm.im/playwright-browser-mcp
+
+playwright-mcp-server
+MCP server for generating Playwright tests
+Version 1.0.0 published 2025-04-18 by siadiur
+Maintainers: siadiur
+Keywords: playwright testing mcp cursor automation
+https://npm.im/playwright-mcp-server
+
+wsl-chrome-bridge
+Bridge Chrome DevTools MCP/Playwright MCP in WSL2 to Windows Chrome
+Version 0.3.0 published 2026-04-21 by pigochu
+Maintainers: pigochu
+https://npm.im/wsl-chrome-bridge
+
+@enyonee/playwright-mcp-ultra
+Playwright MCP Ultra - fork with ~60x token optimization for AI agents
+Version 0.1.1 published 2026-04-06 by enyonee
+Maintainers: enyonee
+https://npm.im/@enyonee/playwright-mcp-ultra
+
+playwright-sessions
+Playwright MCP with persistent named sessions — save/restore browser auth, clone sessions, manage multiple isolated contexts. Fork of microsoft/playwright-mcp.
+Version 0.3.1 published 2026-04-14 by gabrielantonyxaviour
+Maintainers: gabrielantonyxaviour
+Keywords: playwright mcp mcp-server model-context-protocol sessions browser-automation claude claude-code claude-code-plugin ai llm testing e2e
+https://npm.im/playwright-sessions
+
+@cloudflare/playwright-mcp
+Cloudflare Playwright Tools for MCP
+Version 0.0.5 published 2025-07-29 by celso
+Maintainers: rexscaria dcruz_cf jculvey sejoker cf-radar cf-ci-write segments-write thibmeu xortive cf-ci2 lvalenta worenga third774 jasnell terinjokes celso jsteinberger gregbrimble asapzacy g4brym wrangler-publisher cf-media-manager dash_service_account lerwincf cf-npm-publish simonabadoiu cms1919 mgirouard-cf musa-cf vaishakpdinesh ichernetsky-cf jseba_cf gabivlj-cf ganders-cloudflare nsharma-cf mikenomitch tlefebvre_cf nafeezcf eduardo-vargas threepointone xtuc
+https://npm.im/@cloudflare/playwright-mcp
+

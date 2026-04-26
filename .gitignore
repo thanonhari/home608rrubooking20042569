@@ -33,3 +33,6 @@ mempalace.yaml
 
 # MemPalace per-project files (issue #185)
 entities.json
+
+# Backups
+backups/

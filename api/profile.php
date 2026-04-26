@@ -1,5 +1,5 @@
 <?php
-// api/profile.php - The Delete-and-Recreate Salvation
+// api/profile.php - Standard Profile Update
 require_once __DIR__ . '/base.php';
 
 requireLogin();
@@ -9,58 +9,66 @@ $input = getInput();
 $userId = $_SESSION['user_id'];
 
 if ($method === 'GET') {
-    $depts = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
-    $positions = $pdo->query("SELECT name FROM positions ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->execute([$userId]);
-    $userProfile = $stmt->fetch();
-    sendResponse(['profile' => $userProfile, 'master' => ['departments' => $depts, 'positions' => $positions]]);
+    try {
+        $depts = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+        $positions = $pdo->query("SELECT name FROM positions ORDER BY name ASC")->fetchAll(PDO::FETCH_COLUMN);
+        
+        $stmt = $pdo->prepare("SELECT id, username, prefix, fullname, role, user_type, status, position, department, organization, address, line_id, phone, email, created_at FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $userProfile = $stmt->fetch();
+        
+        if (!$userProfile) {
+            sendResponse(['error' => 'User not found'], 404);
+        }
+        
+        sendResponse([
+            'profile' => $userProfile, 
+            'master' => ['departments' => $depts, 'positions' => $positions]
+        ]);
+    } catch (Exception $e) {
+        sendResponse(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
 }
 
 if ($method === 'PATCH') {
     try {
-        $pdo->beginTransaction();
-
-        // 1. ดึงข้อมูลเดิมมาเก็บไว้ก่อน
+        // Fetch current data to preserve unsubmitted fields
         $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $old = $stmt->fetch();
 
-        if (!$old) throw new Exception("User not found");
+        if (!$old) sendResponse(['error' => 'User not found'], 404);
 
-        // 2. เตรียมข้อมูลใหม่ (เอาของใหม่ทับของเดิม)
-        $new = [
-            'username' => $old['username'],
-            'password_hash' => !empty($input['new_password']) ? password_hash($input['new_password'], PASSWORD_BCRYPT) : $old['password_hash'],
-            'role' => $old['role'],
-            'status' => $old['status'],
-            'fullname' => $input['fullname'] ?? $old['fullname'],
-            'prefix' => $input['prefix'] ?? $old['prefix'],
-            'position' => $input['position'] ?? $old['position'],
-            'department' => $input['department'] ?? $old['department'],
-            'phone' => $input['phone'] ?? $old['phone'],
-            'email' => $input['email'] ?? $old['email'],
-            'created_at' => $old['created_at']
-        ];
+        $fullname = trim($input['fullname'] ?? $old['fullname']);
+        $prefix = trim($input['prefix'] ?? $old['prefix']);
+        $phone = trim($input['phone'] ?? $old['phone']);
+        $email = trim($input['email'] ?? $old['email']);
+        $address = trim($input['address'] ?? ($old['address'] ?? ''));
+        $line_id = trim($input['line_id'] ?? ($old['line_id'] ?? ''));
+        $department = trim($input['department'] ?? ($old['department'] ?? ''));
+        $position = trim($input['position'] ?? ($old['position'] ?? ''));
+        $organization = trim($input['organization'] ?? ($old['organization'] ?? ''));
 
-        // 3. ลบของเก่า (เลี่ยงปัญหา Update ติด Trigger)
-        $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
+        $params = [$prefix, $fullname, $phone, $email, $address, $line_id, $department, $position, $organization];
+        $sql = "UPDATE users SET prefix = ?, fullname = ?, phone = ?, email = ?, address = ?, line_id = ?, department = ?, position = ?, organization = ?";
 
-        // 4. บันทึกกลับเข้าไปใหม่ (ระบุ ID เดิม)
-        $stmt = $pdo->prepare("INSERT INTO users (id, username, password_hash, role, status, fullname, prefix, position, department, phone, email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $userId, $new['username'], $new['password_hash'], $new['role'], $new['status'], 
-            $new['fullname'], $new['prefix'], $new['position'], $new['department'], $new['phone'], 
-            $new['email'], $new['created_at']
-        ]);
+        if (!empty($input['new_password'])) {
+            $sql .= ", password_hash = ?";
+            $params[] = password_hash($input['new_password'], PASSWORD_BCRYPT);
+        }
 
-        $pdo->commit();
-        logAction('PROFILE_RECREATED', "User ID $userId data refreshed via Recreate method");
+        $sql .= " WHERE id = ?";
+        $params[] = $userId;
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        logAction('PROFILE_UPDATED', "User ID $userId updated their profile");
         sendResponse(['success' => true]);
 
     } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        sendResponse(['error' => $e->getMessage()], 500);
+        sendResponse(['error' => 'Update failed: ' . $e->getMessage()], 500);
     }
 }
+
 sendResponse(['error' => 'Method not allowed'], 405);

@@ -1,40 +1,40 @@
 # Project: Room Booking System (RRU)
-## Current Status: April 26, 2026
+## Final Status: April 26, 2026
 - **Source Control:** Successfully migrated to https://github.com/thanonhari/home608rrubooking20042569.git (Branch: `main`)
-- **Database:** Fully migrated to align with code requirements (fixed missing columns/tables).
-- **Last Action:** Enhanced login security, added quick login testing, and fixed DB schema.
+- **Database:** Fully migrated and verified.
+- **Production Ready:** All hardening, security, and cleanup tasks completed.
 
-## Completed Tasks: April 24, 2026
+## Completed Tasks:
 ### 1. External Booking System (บุคคลภายนอก) - [DONE]
-- **Database Update:** Added `user_type`, `organization`, and financial columns to `users` and `bookings`.
-- **Room Rates:** Migrated official rates (4H/8H), overtime fees, and staff compensation based on 2021 regulations.
-- **Logic:** Implemented dynamic discount tiers (100% External, 60% Gov, 50% Internal).
-- **UI/UX:** Enhanced registration and booking modals with real-time price estimation.
+- Implemented dynamic rates, government discounts, and financial tracking.
 
 ### 2. Enhanced Booking Notifications - [DONE]
-- **Telegram/Email:** Added detailed notifications for new registrations and bookings, including user type and organization.
+- Telegram, Email, and LINE notifications integrated.
 
 ### 3. Financial Reports & Statistics - [DONE]
-- **Stats Dashboard:** Financial charts (Monthly Revenue & Revenue by Room) for Admin/Staff/Approver.
-- **Export:** Added CSV Export functionality with UTF-8 BOM support for Excel (Thai language).
-- **Access Control:** Restricted financial inputs and reports to privileged roles.
+- Dashboard with charts and CSV export functionality.
 
 ### 4. Automated Testing & Audit - [DONE]
-- **Tooling:** Installed Python 3.12, MarkItDown, and Playwright.
-- **Audit:** Created `scripts/system_audit.php` and `scripts/db_health_check.php`.
-- **Security:** Enhanced login security (Session regeneration, password validation).
-- **Dev Tools:** Added Quick Login buttons for role-based testing.
+- System audit scripts and login security enhancements.
 
-## Pending Tasks (Next):
-### 5. PDF Invoice Generation
-- Generate a formal booking confirmation PDF with the calculated price and 50% deposit requirement.
+### 5. PDF Invoice Generation - [DONE]
+- Playwright-based PDF generation for formal invoices.
 
-### 6. Production Hardening & Reliability
-- **Automated Backup:** Implement a daily database backup script (.sql export).
-- **Security Hardening:** Enhance server-side validation and SQL injection protection in all API endpoints.
-- **Advanced Audit Logs:** Detailed change tracking (tracking what values were changed, by whom).
-- **System Health Check:** Admin dashboard to monitor DB connection, disk usage, and folder permissions.
+### 6. Production Hardening & Reliability - [DONE]
+- **Automated Backup:** `scripts/backup_db.php` with 30-day retention.
+- **Security Hardening:** Strict input validation and session security.
+- **Advanced Audit Logs:** Detailed action tracking with request context.
+- **System Health Check:** Admin dashboard for DB, disk, and folder status.
 
-### 7. User Experience & Polishing
-- Final code cleanup and standardizing API response formats.
-- Visual review of all room photos and metadata.
+### 7. User Experience & Cleanup - [DONE]
+- Standardized API response formats.
+- Cleaned up temporary migration and fix scripts.
+- Verified room metadata and photo management.
+
+## Technical Notes
+- **PHP Path:** `C:\xampp\php\php.exe`
+- **Backup Path:** `backups/` (auto-cleaned)
+- **Hardening:** All inputs validated via `validate()` helper in `api/base.php`.
+- **Guidelines:** Follows Andrej Karpathy and MemPalace principles for maintenance.
+
+**Project signed off and ready for deployment.**

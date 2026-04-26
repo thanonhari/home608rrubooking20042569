@@ -21,6 +21,7 @@ if ($method === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?");
         $stmt->execute([$key, $value, $value]);
     }
+    logAction('SETTINGS_UPDATED', "System settings updated by admin");
     sendResponse(['success' => true]);
 }
 

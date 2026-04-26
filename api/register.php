@@ -13,6 +13,8 @@ $phone = trim($input['phone'] ?? '');
 $email = trim($input['email'] ?? '');
 $user_type = trim($input['user_type'] ?? 'internal');
 $organization = trim($input['organization'] ?? '');
+$address = trim($input['address'] ?? '');
+$line_id = trim($input['line_id'] ?? '');
 
 if (empty($username) || empty($password) || empty($fullname)) {
     sendResponse(['error' => 'Required fields missing'], 400);
@@ -57,8 +59,8 @@ try {
     }
 
     // 3. Create user record
-    $stmt = $pdo->prepare("INSERT INTO users (username, prefix, fullname, password_hash, role, user_type, status, position, department, organization, phone, email) VALUES (?, ?, ?, ?, 'user', ?, 'pending', ?, ?, ?, ?, ?)");
-    $stmt->execute([$username, $prefix, $fullname, $hash, $user_type, $position, $department, $organization, $phone, $email]);
+    $stmt = $pdo->prepare("INSERT INTO users (username, prefix, fullname, password_hash, role, user_type, status, position, department, organization, address, line_id, phone, email) VALUES (?, ?, ?, ?, 'user', ?, 'pending', ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$username, $prefix, $fullname, $hash, $user_type, $position, $department, $organization, $address, $line_id, $phone, $email]);
     
     $pdo->commit();
     logAction('USER_REGISTERED', "New registration: $username ($user_type: " . ($user_type === 'internal' ? $department : $organization) . ")");

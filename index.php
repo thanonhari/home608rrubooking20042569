@@ -70,7 +70,7 @@
                 <section id="rooms-section" style="display: none;">
                     <div class="flex justify-between items-center mb-6">
                         <h1 class="text-2xl font-black">Room Management</h1>
-                        <button class="btn btn-primary" onclick="showRoomForm()"><i class="fas fa-plus"></i> Add Room</button>
+                        <button class="btn btn-primary" onclick="showRoomDetails()"><i class="fas fa-plus"></i> Add Room</button>
                     </div>
                     <div id="rooms-table-container" class="bg-base-100 rounded-2xl shadow-sm border border-base-300 overflow-x-auto"></div>
                 </section>
@@ -112,10 +112,46 @@
                                         <div class="form-control"><label class="label"><span class="label-text font-bold">Pass</span></label><input type="password" name="smtp_pass" class="input input-bordered" /></div>
                                     </div>
                                 </div>
-                                <div class="card-actions justify-center pt-6 border-t">
+                                <div class="card-actions justify-center gap-4 pt-6 border-t">
                                     <button type="submit" class="btn btn-primary btn-wide">Save All Settings</button>
+                                    <button type="button" class="btn btn-ghost" onclick="cancelSettings()">Cancel</button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="maintenance-section" style="display: none;">
+                    <h1 class="text-2xl font-black mb-6">System Maintenance & Health</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Health Status -->
+                        <div class="card bg-base-100 shadow-xl border border-base-300">
+                            <div class="card-body">
+                                <h2 class="card-title text-primary"><i class="fas fa-heartbeat"></i> System Health</h2>
+                                <div id="health-status-container" class="space-y-3 mt-4">
+                                    <div class="flex justify-center p-8"><span class="loading loading-spinner loading-lg text-primary"></span></div>
+                                </div>
+                                <div class="card-actions justify-end mt-4">
+                                    <button class="btn btn-ghost btn-sm" onclick="checkSystemHealth()"><i class="fas fa-sync"></i> Refresh</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Backup Tools -->
+                        <div class="card bg-base-100 shadow-xl border border-base-300">
+                            <div class="card-body">
+                                <h2 class="card-title text-secondary"><i class="fas fa-database"></i> Database Backups</h2>
+                                <p class="text-sm opacity-70">สร้างไฟล์สำรองข้อมูล (.sql) และเก็บไว้ในเซิร์ฟเวอร์</p>
+                                <div class="space-y-4 mt-4">
+                                    <button class="btn btn-outline btn-secondary w-full" onclick="runManualBackup()">
+                                        <i class="fas fa-download"></i> Create Manual Backup Now
+                                    </button>
+                                    <div class="divider text-[10px] opacity-40 uppercase font-bold">Recent Backups</div>
+                                    <div id="recent-backups-container" class="text-xs space-y-2">
+                                        <!-- Backup list -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -146,10 +182,12 @@
                         Quick Login (Test)
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button class="btn btn-xs btn-outline btn-primary" onclick="quickLogin('admin')">Admin</button>
+                        <button class="btn btn-xs btn-outline btn-error" onclick="quickLogin('admin')">Admin</button>
                         <button class="btn btn-xs btn-outline btn-secondary" onclick="quickLogin('approver')">Approv</button>
                         <button class="btn btn-xs btn-outline btn-accent" onclick="quickLogin('staff')">Staff</button>
-                        <button class="btn btn-xs btn-outline" onclick="quickLogin('user')">User</button>
+                        <button class="btn btn-xs btn-outline btn-info" onclick="quickLogin('user_internal')">Internal</button>
+                        <button class="btn btn-xs btn-outline btn-secondary" onclick="quickLogin('user_gov')">Gov</button>
+                        <button class="btn btn-xs btn-outline btn-warning" onclick="quickLogin('user_external')">External</button>
                     </div>
                 </div>
 

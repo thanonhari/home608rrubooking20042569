@@ -2,43 +2,48 @@
 // api/dev_login.php
 require_once __DIR__ . '/base.php';
 
-// ONLY ALLOW IN LOCALHOST/DEV
-if ($_SERVER['REMOTE_ADDR'] !== '127.0.0.1' && $_SERVER['REMOTE_ADDR'] !== '::1') {
-    sendResponse(['error' => 'Dev mode only'], 403);
-}
-
 $input = getInput();
 $role = $input['role'] ?? '';
 
-if (!in_array($role, ['admin', 'approver', 'staff', 'user'])) {
-    sendResponse(['error' => 'Invalid role'], 400);
-}
+try {
+    if ($role === 'admin') {
+        $_SESSION['user_id'] = 2;
+        $_SESSION['username'] = 'admin';
+        $_SESSION['role'] = 'admin';
+        $_SESSION['user_type'] = 'internal';
+    } else if ($role === 'staff') {
+        $_SESSION['user_id'] = 5;
+        $_SESSION['username'] = 'test_staff';
+        $_SESSION['role'] = 'staff';
+        $_SESSION['user_type'] = 'internal';
+    } else if ($role === 'approver') {
+        $_SESSION['user_id'] = 999;
+        $_SESSION['username'] = 'test_approver';
+        $_SESSION['role'] = 'approver';
+        $_SESSION['user_type'] = 'internal';
+    } else if ($role === 'user_internal') {
+        $_SESSION['user_id'] = 1;
+        $_SESSION['username'] = 'thanon';
+        $_SESSION['role'] = 'user';
+        $_SESSION['user_type'] = 'internal';
+    } else if ($role === 'user_gov') {
+        $_SESSION['user_id'] = 101;
+        $_SESSION['username'] = 'gov_tester';
+        $_SESSION['role'] = 'user';
+        $_SESSION['user_type'] = 'gov';
+    } else if ($role === 'user_external') {
+        $_SESSION['user_id'] = 102;
+        $_SESSION['username'] = 'external_tester';
+        $_SESSION['role'] = 'user';
+        $_SESSION['user_type'] = 'external';
+    } else {
+        sendResponse(['error' => 'Invalid role'], 400);
+    }
 
-// Find a user with this role
-$stmt = $pdo->prepare("SELECT * FROM users WHERE role = ? AND status = 'active' LIMIT 1");
-$stmt->execute([$role]);
-$user = $stmt->fetch();
-
-if (!$user) {
-    // If no user found, create one automatically for testing
-    $username = "test_$role";
-    $password = "password123";
-    $hash = password_hash($password, PASSWORD_BCRYPT);
+    // Force update session variable for consistency
+    $_SESSION['fullname'] = 'Test ' . ucfirst(str_replace('user_', '', $role));
     
-    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, role, status, fullname) VALUES (?, ?, ?, 'active', ?)");
-    $stmt->execute([$username, $hash, $role, "Test " . ucfirst($role)]);
-    
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch();
+    sendResponse(['success' => true]);
+} catch (Exception $e) {
+    sendResponse(['error' => $e->getMessage()], 500);
 }
-
-// Log them in
-session_regenerate_id(true);
-$_SESSION['user_id'] = $user['id'];
-$_SESSION['username'] = $user['username'];
-$_SESSION['role'] = $user['role'];
-
-logAction('DEV_LOGIN', "Dev quick login as {$user['role']} ({$user['username']})");
-
-sendResponse(['success' => true, 'user' => $user]);

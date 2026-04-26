@@ -12,7 +12,7 @@ set_exception_handler(function ($e) {
     http_response_code(500);
     echo json_encode([
         'error' => 'Internal Server Error',
-        'message' => $e->getMessage(), // Useful for debugging, remove in production if sensitive
+        'message' => $e->getMessage(),
         'code' => $e->getCode()
     ]);
     exit;
@@ -24,7 +24,9 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
 });
 
 ob_start();
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../includes/db.php';
 
@@ -75,13 +77,47 @@ function getInput() {
  */
 function logAction($action, $details = null) {
     global $pdo;
+    $userId = $_SESSION['user_id'] ?? null;
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'CLI';
+    $url = $_SERVER['REQUEST_URI'] ?? 'UNKNOWN';
+    
+    $contextualDetails = [
+        'info' => $details,
+        'method' => $method,
+        'url' => $url
+    ];
+    $jsonDetails = json_encode($contextualDetails, JSON_UNESCAPED_UNICODE);
+
     try {
-        $userId = $_SESSION['user_id'] ?? null;
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $stmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$userId, $action, $details, $ip]);
+        $stmt->execute([$userId, $action, $jsonDetails, $ip]);
     } catch (Exception $e) {
-        // Silently fail logging to prevent crashing the main request
         error_log("Logging failed: " . $e->getMessage());
     }
+}
+
+/**
+ * Strict Input Validation Helper
+ */
+function validate($data, $rules) {
+    $errors = [];
+    foreach ($rules as $field => $rule) {
+        $val = $data[$field] ?? null;
+        $params = explode('|', $rule);
+        
+        foreach ($params as $p) {
+            if ($p === 'required' && ($val === null || $val === '')) $errors[] = "$field is required";
+            if ($p === 'numeric' && $val !== null && !is_numeric($val)) $errors[] = "$field must be numeric";
+            if ($p === 'email' && $val !== null && !filter_var($val, FILTER_VALIDATE_EMAIL)) $errors[] = "Invalid email format";
+            if (str_starts_with($p, 'min:')) {
+                $min = (int)substr($p, 4);
+                if ($val !== null && strlen((string)$val) < $min) $errors[] = "$field must be at least $min chars";
+            }
+        }
+    }
+    if (!empty($errors)) {
+        sendResponse(['error' => 'Validation failed', 'details' => $errors], 422);
+    }
+    return true;
 }

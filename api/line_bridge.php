@@ -9,7 +9,7 @@ $data = json_decode($input, true);
 
 if (!$data || !isset($data['key']) || $data['key'] !== GAS_SECRET_KEY) {
     http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+    sendResponse(['status' => 'error', 'message' => 'Unauthorized']);
     exit;
 }
 
@@ -18,7 +18,7 @@ $message = trim($data['message'] ?? '');
 $action = $data['action'] ?? 'log';
 
 if (!$lineUserId) {
-    echo json_encode(['status' => 'error', 'message' => 'Missing LINE User ID']);
+    sendResponse(['status' => 'error', 'message' => 'Missing LINE User ID']);
     exit;
 }
 
@@ -37,7 +37,7 @@ try {
             $stmtUpdate = $pdo->prepare("UPDATE bookings SET rating = ? WHERE id = ?");
             $stmtUpdate->execute([$score, $bookingId]);
             
-            echo json_encode([
+            sendResponse([
                 'status' => 'success',
                 'message' => "⭐ ขอบพระคุณสำหรับคะแนน $score ดาวครับ!\nความเห็นของท่านช่วยให้เราพัฒนาบริการให้ดียิ่งขึ้นครับ 🙏"
             ]);
@@ -47,7 +47,7 @@ try {
 
     // 2. กรณีผู้ใช้กดปุ่ม "แจ้งชำระเงิน"
     if ($message === 'แจ้งชำระเงิน') {
-        echo json_encode([
+        sendResponse([
             'status' => 'success',
             'messages' => [
                 ['type' => 'text', 'text' => "💳 ท่านสามารถโอนเงินมัดจำ (50%) หรือยอดเต็ม ได้ที่บัญชีด้านล่างนี้ครับ"],
@@ -61,7 +61,7 @@ try {
     // 3. กรณีส่งสลิป (Action: payment_slip)
     if ($action === 'payment_slip' && isset($data['image_data'])) {
         if (!$user) {
-            echo json_encode(['status' => 'success', 'message' => '❌ กรุณาเชื่อมต่อบัญชีก่อนส่งสลิป (พิมพ์ EMAIL:อีเมล)']);
+            sendResponse(['status' => 'success', 'message' => '❌ กรุณาเชื่อมต่อบัญชีก่อนส่งสลิป (พิมพ์ EMAIL:อีเมล)']);
             exit;
         }
 
@@ -70,7 +70,7 @@ try {
         $booking = $stmtBooking->fetch();
 
         if (!$booking) {
-            echo json_encode(['status' => 'success', 'message' => "❓ ไม่พบรายการจองที่รอชำระเงินของคุณ {$user['name']}"]);
+            sendResponse(['status' => 'success', 'message' => "❓ ไม่พบรายการจองที่รอชำระเงินของคุณ {$user['name']}"]);
             exit;
         }
 
@@ -83,7 +83,7 @@ try {
         $updateStmt = $pdo->prepare("UPDATE bookings SET attachment_path = ?, payment_status = 'pending_verify' WHERE id = ?");
         $updateStmt->execute(['uploads/slips/' . $fileName, $booking['id']]);
 
-        echo json_encode(['status' => 'success', 'message' => "✅ ได้รับสลิปเรียบร้อยแล้ว!\nรายการ: {$booking['title']}"]);
+        sendResponse(['status' => 'success', 'message' => "✅ ได้รับสลิปเรียบร้อยแล้ว!\nรายการ: {$booking['title']}"]);
         exit;
     }
 
@@ -97,17 +97,17 @@ try {
         if ($found) {
             $updateStmt = $pdo->prepare("UPDATE users SET line_user_id = ? WHERE email = ?");
             $updateStmt->execute([$lineUserId, $email]);
-            echo json_encode(['status' => 'success', 'message' => "✅ เชื่อมต่อบัญชีคุณ {$found['name']} สำเร็จ!"]);
+            sendResponse(['status' => 'success', 'message' => "✅ เชื่อมต่อบัญชีคุณ {$found['name']} สำเร็จ!"]);
         } else {
-            echo json_encode(['status' => 'success', 'message' => "❓ ไม่พบอีเมล $email ในระบบ"]);
+            sendResponse(['status' => 'success', 'message' => "❓ ไม่พบอีเมล $email ในระบบ"]);
         }
         exit;
     }
 
     // Default
     $name = $user ? $user['name'] : 'ผู้ใช้';
-    echo json_encode(['status' => 'success', 'message' => "สวัสดีคุณ $name! ต้องการทำรายการอะไรแจ้งได้เลยครับ"]);
+    sendResponse(['status' => 'success', 'message' => "สวัสดีคุณ $name! ต้องการทำรายการอะไรแจ้งได้เลยครับ"]);
 
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    sendResponse(['status' => 'error', 'message' => $e->getMessage()]);
 }
